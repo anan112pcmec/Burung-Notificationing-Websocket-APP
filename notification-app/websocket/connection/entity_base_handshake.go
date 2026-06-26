@@ -1,7 +1,8 @@
-package connection_ws
+package connection_models_ws
 
 import (
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -60,6 +61,64 @@ type Target struct {
 	id    int64
 }
 
+func penentuBagan(angka int64) int64 {
+	if angka <= 100 {
+		return 1
+	}
+
+	ratusanKeAtas := math.Ceil(float64(angka) / 100.0) // 104 / 100 = 1.04 -> Ceil = 2
+
+	output := math.Ceil(ratusanKeAtas/10.0) * 10
+
+	return int64(output)
+}
+
+func (a *ActiveConnectionsEntity) SendNotificationDirect(data interface{}, idPenerima int64) {
+
+	indexBagan := penentuBagan(idPenerima)
+
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	if indexBagan < 0 || indexBagan >= int64(len(a.KoneksiMap)) {
+		return
+	}
+
+	targetMap := a.KoneksiMap[indexBagan]
+	if targetMap == nil {
+		return
+	}
+
+	// 3. Tembak langsung KEY map-nya (Tanpa FOR LOOP, dijamin O(1) murni!)
+	if koneksiUser, ada := targetMap[idPenerima]; ada {
+		if koneksiUser.Conn != nil {
+			_ = koneksiUser.Conn.WriteJSON(data)
+		}
+	}
+}
+
+func (a *ActiveConnectionsEntity) SendNotificationBroadCast(data interface{}, idsPenerima ...int64) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	for _, idnye := range idsPenerima {
+		bagan := penentuBagan(idnye)
+
+		if bagan < 0 || bagan >= int64(len(a.KoneksiMap)) {
+			continue
+		}
+
+		if targetMap := a.KoneksiMap[bagan]; targetMap != nil {
+			if koneksiUser, ada := targetMap[idnye]; ada && koneksiUser.Conn != nil {
+
+				go func(conn *websocket.Conn) {
+					_ = conn.WriteJSON(data)
+				}(koneksiUser.Conn)
+
+			}
+		}
+	}
+}
 func (a *ActiveConnectionsEntity) AddConnection(id int64, conn *Koneksi) {
 	conn.SetTimer()
 	conn.StartMonitoring()
