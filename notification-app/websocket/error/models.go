@@ -2,27 +2,20 @@ package error_ws
 
 import (
 	"fmt"
-	"sync"
+
 )
 
 type ErrorLogs struct {
-	mu        sync.RWMutex
-	ErrorData []error
-	ErrChan   chan error
+	ErrChan chan error
 }
 
-// Fungsi untuk inisialisasi struct (wajib bikin channel-nya dulu)
-func NewErrorLogs() *ErrorLogs {
-	return &ErrorLogs{
-		ErrorData: make([]error, 0),
-		ErrChan:   make(chan error, 100), // Buffer 100 supaya ga blocking
+func NewErrorLogs() ErrorLogs {
+	return ErrorLogs{
+		ErrChan: make(chan error, 100),
 	}
 }
 
 func (e *ErrorLogs) AppendError(err error) {
-	e.mu.Lock()
-	e.ErrorData = append(e.ErrorData, err)
-	e.mu.Unlock()
 
 	// Kirim error ke channel tiap ada data masuk
 	e.ErrChan <- err

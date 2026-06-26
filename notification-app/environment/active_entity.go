@@ -1,0 +1,7 @@
+package environment
+
+import connection_models_ws "burung-notificationing-app/notification-app/websocket/connection"
+
+var EntityPenggunaActive connection_models_ws.ActiveConnectionsEntity
+var EntitySellerActive connection_models_ws.ActiveConnectionsEntity
+var EntityKurirActive connection_models_ws.ActiveConnectionsEntity
