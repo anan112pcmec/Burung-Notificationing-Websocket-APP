@@ -1,4 +1,4 @@
-package notificationing_contract
+package notification_contract
 
 import (
 	"encoding/json"

@@ -1,12 +1,14 @@
 package notification_models
 
 type NotificationPengguna struct {
-	IDPengguna int64  `json:"id_pengguna"`
-	Pengirim   string `json:"pengirim"`
-	Judul      string `json:"judul"`
-	Pesan      string `json:"pesan"`
-	CreatedAt  string `json:"created_at"` // Format ISO 8601 (e.g., "2026-06-26T13:00:00Z")
-	ExpiredAt  string `json:"expired_at"` // Opsional: batas waktu event realtime ini valid
+	IDPengguna int64   `json:"id_pengguna"`
+	Pengirim   string  `json:"pengirim"`
+	Judul      string  `json:"judul"`
+	Pesan      string  `json:"pesan"`
+	Pop        float32 `json:"pop"`
+	Archive    bool    `json:"archive"`
+	CreatedAt  string  `json:"created_at"` // Format ISO 8601 (e.g., "2026-06-26T13:00:00Z")
+	ExpiredAt  string  `json:"expired_at"` // Opsional: batas waktu event realtime ini valid
 	Data       struct {
 		Metadata map[string]interface{} `json:"metadata"`
 		Special  interface{}            `json:"special"`
@@ -15,12 +17,14 @@ type NotificationPengguna struct {
 
 // NotificationSeller adalah payload realtime untuk penjual/merchant
 type NotificationSeller struct {
-	IDSeller  int64  `json:"id_seller"`
-	Pengirim  string `json:"pengirim"`
-	Judul     string `json:"judul"`
-	Pesan     string `json:"pesan"`
-	CreatedAt string `json:"created_at"`
-	ExpiredAt string `json:"expired_at"`
+	IDSeller  int64   `json:"id_seller"`
+	Pengirim  string  `json:"pengirim"`
+	Judul     string  `json:"judul"`
+	Pesan     string  `json:"pesan"`
+	Pop       float32 `json:"pop"`
+	Archive   bool    `json:"archive"`
+	CreatedAt string  `json:"created_at"`
+	ExpiredAt string  `json:"expired_at"`
 	Data      struct {
 		Metadata map[string]interface{} `json:"metadata"`
 		Special  interface{}            `json:"special"`
@@ -29,12 +33,14 @@ type NotificationSeller struct {
 
 // NotificationKurir adalah payload realtime untuk driver/kurir
 type NotificationKurir struct {
-	IDKurir   int64  `json:"id_kurir"`
-	Pengirim  string `json:"pengirim"`
-	Judul     string `json:"judul"`
-	Pesan     string `json:"pesan"`
-	CreatedAt string `json:"created_at"`
-	ExpiredAt string `json:"expired_at"`
+	IDKurir   int64   `json:"id_kurir"`
+	Pengirim  string  `json:"pengirim"`
+	Judul     string  `json:"judul"`
+	Pesan     string  `json:"pesan"`
+	Pop       float32 `json:"pop"`
+	Archive   bool    `json:"archive"`
+	CreatedAt string  `json:"created_at"`
+	ExpiredAt string  `json:"expired_at"`
 	Data      struct {
 		Metadata map[string]interface{} `json:"metadata"`
 		Special  interface{}            `json:"special"`
