@@ -1,0 +1,20 @@
+package cass_models
+
+import (
+	"context"
+
+	gocql "github.com/apache/cassandra-gocql-driver/v2"
+)
+
+type TableName interface {
+	TableNameHistorical() string
+	TableNameSotReplica() string
+}
+
+type Method interface {
+	CreateHistoricalTable(ctx context.Context, s *gocql.Session) error
+	CreateSotReplicaTable(ctx context.Context, s *gocql.Session) error
+	CreateArchiveTable(ctx context.Context, s *gocql.Session) error
+	ParseToCUDType() map[string]interface{}
+	DropTable(ctx context.Context, s *gocql.Session) error
+}
