@@ -1,13 +1,14 @@
 package archive_migrations
 
 import (
-	cass_models "burung-notificationing-app/notification-app/database/cassandra/models"
 	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
+
+	cass_models "burung-notificationing-app/notification-app/database/cassandra/models"
 )
 
 func DownRelation(ctx context.Context, session *gocql.Session) []error {

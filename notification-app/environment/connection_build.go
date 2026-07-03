@@ -1,4 +1,4 @@
-package prevision
+package environment
 
 import (
 	"fmt"
@@ -6,9 +6,10 @@ import (
 	"time"
 
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
+	"github.com/redis/go-redis/v9"
 )
 
-func (P *Previsioning) Connect() (error, *gocql.Session) {
+func (P *Environment) Connect() (error, *gocql.Session, *redis.Client) {
 	ch := gocql.NewCluster(fmt.Sprintf("127.0.0.1:%s", P.CASS_ARCHIVE_PORT))
 	ch.Keyspace = P.CASS_ARCHIVE_KEYSPACE
 	ch.ReconnectionPolicy = &gocql.ExponentialReconnectionPolicy{
@@ -28,5 +29,11 @@ func (P *Previsioning) Connect() (error, *gocql.Session) {
 		fmt.Println("berhasil terhubung ke cassandra")
 	}
 
-	return nil, archive_db
+	var redis_session = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", P.RDS_SESSION_HOST, P.RDS_SESSION_PORT),
+		Password: "",
+		DB:       P.RDS_SESSION_DB,
+	})
+
+	return nil, archive_db, redis_session
 }

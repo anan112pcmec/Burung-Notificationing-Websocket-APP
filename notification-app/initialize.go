@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -13,10 +14,11 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	"burung-notificationing-app/notification-app/bwa_http_req"
+	"burung-notificationing-app/notification-app/cache"
+	archive_migrations "burung-notificationing-app/notification-app/database/cassandra/archive_db/migrations"
 	"burung-notificationing-app/notification-app/environment"
 	notification_contract "burung-notificationing-app/notification-app/notification/contract"
 	notification_models "burung-notificationing-app/notification-app/notification/models"
-	"burung-notificationing-app/notification-app/prevision"
 	connection_models_ws "burung-notificationing-app/notification-app/websocket/connection"
 	entity_handshake_ws "burung-notificationing-app/notification-app/websocket/handshake"
 )
@@ -101,7 +103,7 @@ func (O *Orchestration[T]) Watch(a *connection_models_ws.ActiveConnectionsEntity
 
 					err := bwa_http_req.PenggunaNotificationInHandles(ctx, np, a, archive_db)
 					if err != nil {
-						environment.ErrorData.AppendError(err)
+						cache.ErrorData.AppendError(err)
 					}
 				}(any(notif).(notification_models.NotificationPengguna))
 			}
@@ -116,7 +118,7 @@ func (O *Orchestration[T]) Watch(a *connection_models_ws.ActiveConnectionsEntity
 
 					err := bwa_http_req.KurirNotificationInHandles(ctx, nk, a, archive_db)
 					if err != nil {
-						environment.ErrorData.AppendError(err)
+						cache.ErrorData.AppendError(err)
 					}
 				}(any(notif).(notification_models.NotificationKurir))
 			}
@@ -131,25 +133,35 @@ func (O *Orchestration[T]) Watch(a *connection_models_ws.ActiveConnectionsEntity
 
 					err := bwa_http_req.SellerNotificationInHandles(ctx, ns, a, archive_db)
 					if err != nil {
-						environment.ErrorData.AppendError(err)
+						cache.ErrorData.AppendError(err)
 					}
 				}(any(notif).(notification_models.NotificationSeller))
 			}
 		}
 
-		// Menunggu batch ini selesai dikirim ke WS sebelum menerima trigger timer berikutnya
 		O.wg.Wait()
 	}
 }
 func RunApp() {
-
-	var Connection prevision.Previsioning
+	var Connection environment.Environment
 	Connection.InitialArchiveDB(os.Getenv("CASS_ARCHIVE_USER"), os.Getenv("CASS_ARCHIVE_PASS"), os.Getenv("CASS_ARCHIVE_PORT"), os.Getenv("CASS_ARCHIVE_SPACEKEY"))
-	err_conn, archive_db := Connection.Connect()
+	rds_db, err_rds := strconv.Atoi(os.Getenv("RDSSESSION"))
+	if err_rds != nil {
+		return
+	}
+	Connection.InitialSessionCache(os.Getenv("RDSHOST"), os.Getenv("RDSPORT"), rds_db)
+	err_conn, archive_db, redis_session := Connection.Connect()
 	if err_conn != nil {
 		fmt.Println("gagal koneksi", err_conn)
 		return
 	}
+
+	ctx := context.Background()
+
+	if err := archive_migrations.UpRelation(ctx, archive_db); err[0] != nil {
+		cache.ErrorData.AppendError(err[0])
+	}
+
 	appWsPengguna := fiber.New()
 	appWsSeller := fiber.New()
 	appWsKurir := fiber.New()
@@ -161,11 +173,11 @@ func RunApp() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		entity_handshake_ws.HandshakePengguna(environment.PenggunaPathHandShake, &environment.EntityPenggunaActive, appWsPengguna, &environment.ErrorData)
+		entity_handshake_ws.HandshakePengguna(cache.PenggunaPathHandShake, &cache.EntityPenggunaActive, appWsPengguna, &cache.ErrorData, redis_session)
 
 		fmt.Println("Memulai listen ke port ws pengguna...")
-		if err := appWsPengguna.Listen(fmt.Sprintf(":%s", environment.PortRunningWSAppPengguna)); err != nil {
-			environment.ErrorData.AppendError(err)
+		if err := appWsPengguna.Listen(fmt.Sprintf(":%s", cache.PortRunningWSAppPengguna)); err != nil {
+			cache.ErrorData.AppendError(err)
 		}
 	}()
 
@@ -173,11 +185,11 @@ func RunApp() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		entity_handshake_ws.HandshakeSeller(environment.SellerPathHandShake, &environment.EntitySellerActive, appWsSeller, &environment.ErrorData)
+		entity_handshake_ws.HandshakeSeller(cache.SellerPathHandShake, &cache.EntitySellerActive, appWsSeller, &cache.ErrorData, redis_session)
 
 		fmt.Println("Memulai listen ke port ws seller...")
-		if err := appWsSeller.Listen(fmt.Sprintf(":%s", environment.PortRunningWSAppSeller)); err != nil {
-			environment.ErrorData.AppendError(err)
+		if err := appWsSeller.Listen(fmt.Sprintf(":%s", cache.PortRunningWSAppSeller)); err != nil {
+			cache.ErrorData.AppendError(err)
 		}
 	}()
 
@@ -185,11 +197,11 @@ func RunApp() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		entity_handshake_ws.HandshakeKurir(environment.KurirPathHandShake, &environment.EntityKurirActive, appWsKurir, &environment.ErrorData)
+		entity_handshake_ws.HandshakeKurir(cache.KurirPathHandShake, &cache.EntityKurirActive, appWsKurir, &cache.ErrorData, redis_session)
 
 		fmt.Println("Memulai listen ke port ws kurir...")
-		if err := appWsKurir.Listen(fmt.Sprintf(":%s", environment.PortRunningWSAppKurir)); err != nil {
-			environment.ErrorData.AppendError(err)
+		if err := appWsKurir.Listen(fmt.Sprintf(":%s", cache.PortRunningWSAppKurir)); err != nil {
+			cache.ErrorData.AppendError(err)
 		}
 	}()
 
@@ -198,7 +210,7 @@ func RunApp() {
 		Out:   make(chan []notification_models.NotificationPengguna),
 	}
 	OrchestrationReqPengguna.Timer.Stop()
-	go OrchestrationReqPengguna.Watch(&environment.EntityPenggunaActive, archive_db)
+	go OrchestrationReqPengguna.Watch(&cache.EntityPenggunaActive, archive_db)
 
 	var OrchestrationReqSeller Orchestration[notification_models.NotificationSeller]
 	OrchestrationReqSeller = Orchestration[notification_models.NotificationSeller]{
@@ -206,7 +218,7 @@ func RunApp() {
 		Out:   make(chan []notification_models.NotificationSeller),
 	}
 	OrchestrationReqSeller.Timer.Stop()
-	go OrchestrationReqSeller.Watch(&environment.EntitySellerActive, archive_db)
+	go OrchestrationReqSeller.Watch(&cache.EntitySellerActive, archive_db)
 
 	var OrchestrationReqKurir Orchestration[notification_models.NotificationKurir]
 	OrchestrationReqKurir = Orchestration[notification_models.NotificationKurir]{
@@ -214,7 +226,7 @@ func RunApp() {
 		Out:   make(chan []notification_models.NotificationKurir),
 	}
 	OrchestrationReqKurir.Timer.Stop()
-	go OrchestrationReqKurir.Watch(&environment.EntityKurirActive, archive_db)
+	go OrchestrationReqKurir.Watch(&cache.EntityKurirActive, archive_db)
 
 	// 4. Goroutine - HTTP API Notifikasi Masuk
 	wg.Add(1)
@@ -222,7 +234,7 @@ func RunApp() {
 		defer wg.Done()
 
 		// Mendaftarkan 3 path POST berbeda untuk Notifikasi Masuk
-		appAPIInNotifikasi.Post(environment.PenggunaPathNotifikasiMasuk, func(c fiber.Ctx) error {
+		appAPIInNotifikasi.Post(cache.PenggunaPathNotifikasiMasuk, func(c fiber.Ctx) error {
 
 			data := c.Body()
 			err, parsedData := notification_contract.NotificationManager[notification_models.NotificationPengguna]{}.ParseNotification(data)
@@ -237,7 +249,7 @@ func RunApp() {
 
 		})
 
-		appAPIInNotifikasi.Post(environment.SellerPathNotifikasiMasuk, func(c fiber.Ctx) error {
+		appAPIInNotifikasi.Post(cache.SellerPathNotifikasiMasuk, func(c fiber.Ctx) error {
 
 			data := c.Body()
 			err, parsedData := notification_contract.NotificationManager[notification_models.NotificationSeller]{}.ParseNotification(data)
@@ -250,7 +262,7 @@ func RunApp() {
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi Seller diterima"})
 		})
 
-		appAPIInNotifikasi.Post(environment.KurirPathNotifikasiMasuk, func(c fiber.Ctx) error {
+		appAPIInNotifikasi.Post(cache.KurirPathNotifikasiMasuk, func(c fiber.Ctx) error {
 
 			data := c.Body()
 			err, parsedData := notification_contract.NotificationManager[notification_models.NotificationKurir]{}.ParseNotification(data)
@@ -264,9 +276,9 @@ func RunApp() {
 		})
 
 		fmt.Println("Memulai listen ke port API In Notifikasi...")
-		// Pastikan variabel port ini sudah ada di struct environment kamu, misal: PortRunningAPIInNotifikasi
-		if err := appAPIInNotifikasi.Listen(fmt.Sprintf(":%s", environment.PortRunningAPIInNotifikasi)); err != nil {
-			environment.ErrorData.AppendError(err)
+		// Pastikan variabel port ini sudah ada di struct cache kamu, misal: PortRunningAPIInNotifikasi
+		if err := appAPIInNotifikasi.Listen(fmt.Sprintf(":%s", cache.PortRunningAPIInNotifikasi)); err != nil {
+			cache.ErrorData.AppendError(err)
 		}
 	}()
 

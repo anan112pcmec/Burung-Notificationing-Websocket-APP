@@ -189,24 +189,3 @@ func (a *ActiveConnectionsEntity) CleanUpClient(bagan int, id int64) {
 		delete(a.KoneksiMap[bagan], id)
 	}
 }
-
-type PenggunaBaseHandshake struct {
-	ID       int64  `gorm:"primaryKey;autoIncrement" json:"id_user"`
-	Username string `gorm:"column:username;type:varchar(100);not null;default:''" json:"username_user"`
-	Nama     string `gorm:"column:nama;type:text;not null;default:''" json:"nama_user"`
-	Email    string `gorm:"column:email;type:varchar(100);not null;uniqueIndex" json:"email_user"`
-}
-
-type SellerBaseHandshake struct {
-	ID       int32  `gorm:"primaryKey;autoIncrement" json:"id_seller"`
-	Username string `gorm:"column:username;type:varchar(100);notnull;default:''" json:"username_seller"`
-	Nama     string `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_seller"`
-	Email    string `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_seller"`
-}
-
-type KurirBaseHandshake struct {
-	ID       int64  `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
-	Nama     string `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
-	Username string `gorm:"column:username;type:text;not null" json:"username_kurir"`
-	Email    string `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
-}
