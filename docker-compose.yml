@@ -1,0 +1,26 @@
+services:
+  historical-node1:
+    image: cassandra:4.1
+    container_name: cassandra_archive_n1
+    environment:
+      - CASSANDRA_CLUSTER_NAME=burung_archive
+      - CASSANDRA_NUM_TOKENS=1
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+    ports:
+      - "9044:9042" # Mengakses Cassandra lewat port 9044 di laptop/host Anda
+    volumes:
+      - cassandra_archive_db_data:/var/lib/cassandra # Typo disamakan dengan bagian bawah
+    restart: unless-stopped
+    networks:
+      - watcher_net
+
+# =========================================================================
+# CLUSTER CASSANDRA 2: burung_sot_replica (Volume Added)
+# =========================================================================
+
+volumes:
+  cassandra_archive_db_data: # Ditambahkan titik dua (:) di ujungnya
+
+networks:
+  watcher_net:
+    driver: bridge

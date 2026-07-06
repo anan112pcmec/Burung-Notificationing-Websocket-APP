@@ -12,6 +12,7 @@ import (
 func (P *Environment) Connect() (error, *gocql.Session, *redis.Client) {
 	ch := gocql.NewCluster(fmt.Sprintf("127.0.0.1:%s", P.CASS_ARCHIVE_PORT))
 	ch.Keyspace = P.CASS_ARCHIVE_KEYSPACE
+	ch.ProtoVersion = 4
 	ch.ReconnectionPolicy = &gocql.ExponentialReconnectionPolicy{
 		MaxRetries:      8,                // 9 total percobaan (0s, 1s, 2s, 4s, 8s, 16s, 30s, 30s, 30s)
 		InitialInterval: 1 * time.Second,  // Dimulai pada 1 detik
