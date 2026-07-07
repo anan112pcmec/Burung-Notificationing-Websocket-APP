@@ -16,7 +16,8 @@ func NewErrorLogs() ErrorLogs {
 
 func (e *ErrorLogs) AppendError(err error) {
 
-	// Kirim error ke channel tiap ada data masuk
+
+	// Kirim error ke channel tiap ada data masuk nya ya 
 	e.ErrChan <- err
 }
 
