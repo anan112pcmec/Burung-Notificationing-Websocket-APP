@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 
 	"burung-notificationing-app/notification-app/identity/identity_kurir"
@@ -19,6 +19,7 @@ import (
 
 func HandshakePengguna(path string, dataActivePengguna *connection_models_ws.ActiveConnectionsEntity, app *fiber.App, logs_error *error_ws.ErrorLogs, session *redis.Client) {
 	app.Get(path, websocket.New(func(c *websocket.Conn) {
+		fmt.Println("masuk ke handshake pengguna")
 		defer c.Close()
 		konteks, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()

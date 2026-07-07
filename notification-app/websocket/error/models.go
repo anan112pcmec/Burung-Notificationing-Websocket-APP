@@ -2,7 +2,6 @@ package error_ws
 
 import (
 	"fmt"
-
 )
 
 type ErrorLogs struct {

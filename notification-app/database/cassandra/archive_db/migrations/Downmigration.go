@@ -3,7 +3,6 @@ package archive_migrations
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
@@ -13,28 +12,19 @@ import (
 
 func DownRelation(ctx context.Context, session *gocql.Session) []error {
 	var errs []error = []error{}
-	var wg sync.WaitGroup
-	var mu sync.RWMutex
 
 	for _, model := range model_list {
-		wg.Add(1)
 		fctx, cancel := context.WithTimeout(ctx, time.Second*6)
-		go func(konteks context.Context, ctxCancel context.CancelFunc, m interface{}, sesi *gocql.Session) {
-			defer wg.Done()
-			defer ctxCancel()
 
-			if historicalModel, ok := m.(cass_models.Method); ok {
-				if err := historicalModel.DropTable(konteks, session); err != nil {
-					mu.Lock()
-					errs = append(errs, err)
-					mu.Unlock()
-				}
-			} else {
-				fmt.Printf("Objek %T tidak mengimplementasikan archive_models.Method\n", m)
+		if historicalModel, ok := model.(cass_models.Method); ok {
+			if err := historicalModel.DropTable(fctx, session); err != nil {
+				errs = append(errs, err)
 			}
-		}(fctx, cancel, model, session)
+		} else {
+			fmt.Printf("Objek %T tidak mengimplementasikan archive_models.Method\n", model)
+		}
+		cancel()
 	}
-	wg.Wait()
 
 	return errs
 

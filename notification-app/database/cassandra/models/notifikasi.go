@@ -62,11 +62,11 @@ type NotificationKurir struct {
 // 2. IMPLEMENTASI NOTIFICATION PENGGUNA
 // ==========================================
 
-func (n *NotificationPengguna) TableNameArchive() string {
+func (n NotificationPengguna) TableNameArchive() string {
 	return "notification_pengguna_archive"
 }
 
-func (n *NotificationPengguna) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
+func (n NotificationPengguna) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
 		id_pengguna bigint,
@@ -88,7 +88,7 @@ func (n *NotificationPengguna) CreateArchiveTable(ctx context.Context, session *
 	return nil
 }
 
-func (n *NotificationPengguna) ParseIntoCUDType() map[string]interface{} {
+func (n NotificationPengguna) ParseIntoCUDType() map[string]interface{} {
 	dataJSON, _ := json.Marshal(n.Data)
 	createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
@@ -110,7 +110,7 @@ func (n *NotificationPengguna) ParseIntoCUDType() map[string]interface{} {
 	}
 }
 
-func (n *NotificationPengguna) DropTableArchive(ctx context.Context, session *gocql.Session) error {
+func (n NotificationPengguna) DropTableArchive(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, n.TableNameArchive())
 	if err := session.Query(query).ExecContext(ctx); err != nil {
 		return fmt.Errorf("gagal drop tabel %s: %w", n.TableNameArchive(), err)
@@ -123,11 +123,11 @@ func (n *NotificationPengguna) DropTableArchive(ctx context.Context, session *go
 // 3. IMPLEMENTASI NOTIFICATION SELLER
 // ==========================================
 
-func (n *NotificationSeller) TableNameArchive() string {
+func (n NotificationSeller) TableNameArchive() string {
 	return "notification_seller_archive"
 }
 
-func (n *NotificationSeller) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
+func (n NotificationSeller) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
 		id_seller bigint,
@@ -149,7 +149,7 @@ func (n *NotificationSeller) CreateArchiveTable(ctx context.Context, session *go
 	return nil
 }
 
-func (n *NotificationSeller) ParseIntoCUDType() map[string]interface{} {
+func (n NotificationSeller) ParseIntoCUDType() map[string]interface{} {
 	dataJSON, _ := json.Marshal(n.Data)
 	createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
@@ -171,7 +171,7 @@ func (n *NotificationSeller) ParseIntoCUDType() map[string]interface{} {
 	}
 }
 
-func (n *NotificationSeller) DropTableArchive(ctx context.Context, session *gocql.Session) error {
+func (n NotificationSeller) DropTableArchive(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, n.TableNameArchive())
 	if err := session.Query(query).ExecContext(ctx); err != nil {
 		return fmt.Errorf("gagal drop tabel %s: %w", n.TableNameArchive(), err)
@@ -184,11 +184,11 @@ func (n *NotificationSeller) DropTableArchive(ctx context.Context, session *gocq
 // 4. IMPLEMENTASI NOTIFICATION KURIR
 // ==========================================
 
-func (n *NotificationKurir) TableNameArchive() string {
+func (n NotificationKurir) TableNameArchive() string {
 	return "notification_kurir_archive"
 }
 
-func (n *NotificationKurir) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
+func (n NotificationKurir) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
 		id_kurir bigint,
@@ -210,7 +210,7 @@ func (n *NotificationKurir) CreateArchiveTable(ctx context.Context, session *goc
 	return nil
 }
 
-func (n *NotificationKurir) ParseIntoCUDType() map[string]interface{} {
+func (n NotificationKurir) ParseIntoCUDType() map[string]interface{} {
 	dataJSON, _ := json.Marshal(n.Data)
 	createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
@@ -232,7 +232,7 @@ func (n *NotificationKurir) ParseIntoCUDType() map[string]interface{} {
 	}
 }
 
-func (n *NotificationKurir) DropTableArchive(ctx context.Context, session *gocql.Session) error {
+func (n NotificationKurir) DropTableArchive(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, n.TableNameArchive())
 	if err := session.Query(query).ExecContext(ctx); err != nil {
 		return fmt.Errorf("gagal drop tabel %s: %w", n.TableNameArchive(), err)

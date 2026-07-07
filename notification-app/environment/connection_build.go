@@ -7,6 +7,7 @@ import (
 
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
 	"github.com/redis/go-redis/v9"
+
 )
 
 func (P *Environment) Connect() (error, *gocql.Session, *redis.Client) {

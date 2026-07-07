@@ -2,7 +2,9 @@ package notification_app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -11,7 +13,8 @@ import (
 	"time"
 
 	gocql "github.com/apache/cassandra-gocql-driver/v2"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 
 	"burung-notificationing-app/notification-app/bwa_http_req"
 	"burung-notificationing-app/notification-app/cache"
@@ -143,25 +146,53 @@ func (O *Orchestration[T]) Watch(a *connection_models_ws.ActiveConnectionsEntity
 	}
 }
 func RunApp() {
-	var Connection environment.Environment
-	Connection.InitialArchiveDB(os.Getenv("CASS_ARCHIVE_USER"), os.Getenv("CASS_ARCHIVE_PASS"), os.Getenv("CASS_ARCHIVE_PORT"), os.Getenv("CASS_ARCHIVE_SPACEKEY"))
-	rds_db, err_rds := strconv.Atoi(os.Getenv("RDSSESSION"))
-	if err_rds != nil {
-		return
+
+	go cache.ErrorData.PrintError()
+	time.Sleep(time.Second * 2)
+	// Mengarah langsung ke file .env di folder yang sama
+	if err := godotenv.Load("C:/Burung_App/Project_Source/Backend-3/.env"); err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
 	}
-	Connection.InitialSessionCache(os.Getenv("RDSHOST"), os.Getenv("RDSPORT"), rds_db)
+	fmt.Println("mencoba memulai websocket app")
+
+	var Connection environment.Environment
+	Connection.InitialArchiveDB(
+		os.Getenv("CASS_ARCHIVE_USER"),     // USER (.env: cassandra)
+		os.Getenv("CASS_ARCHIVE_PASS"),     // PASS (.env: cassandra)
+		os.Getenv("CASS_ARCHIVE_PORT"),     // PORT (.env: 9042)
+		os.Getenv("CASS_ARCHIVE_SPACEKEY"), // SPACEKEY (.env: archive_db)
+	)
+
+	rds_db, err := strconv.Atoi(os.Getenv("RDS_SESSION"))
+	if err != nil {
+		rds_db = 1 // Kalau di .env kosong atau typo, otomatis pake database 1
+	}
+
+	Connection.InitialSessionCache(
+		os.Getenv("RDS_HOST"), // HOST (.env: localhost)
+		os.Getenv("RDS_PORT"), // PORT (.env: 6379)
+		rds_db,                // SESSION DB (Udah jadi int dari hasil convert di atas)
+	)
 	err_conn, archive_db, redis_session := Connection.Connect()
 	if err_conn != nil {
 		fmt.Println("gagal koneksi", err_conn)
 		return
 	}
-
 	ctx := context.Background()
 
-	if err := archive_migrations.UpRelation(ctx, archive_db); err[0] != nil {
-		cache.ErrorData.AppendError(err[0])
+	for i := 0; i < 20; i++ {
+		cache.ErrorData.AppendError(errors.New("nyoba tes sajo"))
 	}
 
+	// 1. Jalankan DownRelation
+	if errs := archive_migrations.DownRelation(ctx, archive_db); len(errs) > 0 && errs[0] != nil {
+		cache.ErrorData.AppendError(err_conn)
+	}
+
+	// 2. Jalankan UpRelation
+	if errs := archive_migrations.UpRelation(ctx, archive_db); len(errs) > 0 && errs[0] != nil {
+		cache.ErrorData.AppendError(errs[0])
+	}
 	appWsPengguna := fiber.New()
 	appWsSeller := fiber.New()
 	appWsKurir := fiber.New()
@@ -173,6 +204,7 @@ func RunApp() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		fmt.Print("coba ngehubungin ws pengguna")
 		entity_handshake_ws.HandshakePengguna(cache.PenggunaPathHandShake, &cache.EntityPenggunaActive, appWsPengguna, &cache.ErrorData, redis_session)
 
 		fmt.Println("Memulai listen ke port ws pengguna...")
@@ -233,56 +265,50 @@ func RunApp() {
 	go func() {
 		defer wg.Done()
 
-		// Mendaftarkan 3 path POST berbeda untuk Notifikasi Masuk
-		appAPIInNotifikasi.Post(cache.PenggunaPathNotifikasiMasuk, func(c fiber.Ctx) error {
-
+		// 1. Path POST untuk Notifikasi Pengguna Masuk
+		appAPIInNotifikasi.Post(cache.PenggunaPathNotifikasiMasuk, func(c *fiber.Ctx) error {
 			data := c.Body()
 			err, parsedData := notification_contract.NotificationManager[notification_models.NotificationPengguna]{}.ParseNotification(data)
 			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Data Tidak Sesuai"})
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 			}
 
 			OrchestrationReqPengguna.Insert(parsedData)
-			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi Pengguna diterima"})
 
-			// Logika ketika notifikasi pengguna masuk
-
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi pengguna berhasil diproses"})
 		})
 
-		appAPIInNotifikasi.Post(cache.SellerPathNotifikasiMasuk, func(c fiber.Ctx) error {
-
+		// 2. Path POST untuk Notifikasi Seller Masuk
+		appAPIInNotifikasi.Post(cache.SellerPathNotifikasiMasuk, func(c *fiber.Ctx) error {
 			data := c.Body()
 			err, parsedData := notification_contract.NotificationManager[notification_models.NotificationSeller]{}.ParseNotification(data)
 			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Data Tidak Sesuai"})
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 			}
 
 			OrchestrationReqSeller.Insert(parsedData)
-			// Logika ketika notifikasi seller masuk
-			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi Seller diterima"})
+
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi seller berhasil diproses"})
 		})
 
-		appAPIInNotifikasi.Post(cache.KurirPathNotifikasiMasuk, func(c fiber.Ctx) error {
-
+		appAPIInNotifikasi.Post(cache.KurirPathNotifikasiMasuk, func(c *fiber.Ctx) error {
 			data := c.Body()
 			err, parsedData := notification_contract.NotificationManager[notification_models.NotificationKurir]{}.ParseNotification(data)
 			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Data Tidak Sesuai"})
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 			}
 
 			OrchestrationReqKurir.Insert(parsedData)
-			// Logika ketika notifikasi kurir masuk
-			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi Kurir diterima"})
+
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Notifikasi kurir berhasil diproses"})
 		})
 
 		fmt.Println("Memulai listen ke port API In Notifikasi...")
-		// Pastikan variabel port ini sudah ada di struct cache kamu, misal: PortRunningAPIInNotifikasi
 		if err := appAPIInNotifikasi.Listen(fmt.Sprintf(":%s", cache.PortRunningAPIInNotifikasi)); err != nil {
 			cache.ErrorData.AppendError(err)
 		}
 	}()
 
-	// Menahan main thread sampai ada signal shutdown
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
@@ -290,11 +316,10 @@ func RunApp() {
 
 	fmt.Println("Sistem mendeteksi shutdown, mematikan semua fiber instance...")
 
-	// Mematikan seluruh instance secara Graceful
 	_ = appWsPengguna.Shutdown()
 	_ = appWsSeller.Shutdown()
 	_ = appWsKurir.Shutdown()
-	_ = appAPIInNotifikasi.Shutdown() // Ikut dimatikan dengan aman
+	_ = appAPIInNotifikasi.Shutdown()
 
 	wg.Wait()
 	fmt.Println("sistem notificationing berhenti total")
