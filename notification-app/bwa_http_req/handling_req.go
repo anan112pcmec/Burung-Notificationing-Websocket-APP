@@ -34,7 +34,7 @@ func PenggunaNotificationInHandles(ctx context.Context, data notification_models
 			Data:       data.Data,
 		}
 
-		if err := cass_cud.InsertData(ctx, archive_db, Archive.TableNameArchive(), Archive.ParseIntoCUDType()); err != nil {
+		if err := cass_cud.InsertData(ctx, archive_db, Archive.TableNameArchive(), Archive.ParseToCUDType()); err != nil {
 			cache.ErrorData.AppendError(err)
 		}
 	}
@@ -66,7 +66,7 @@ func SellerNotificationInHandles(ctx context.Context, data notification_models.N
 			Data:      data.Data,
 		}
 
-		if err := cass_cud.InsertData(ctx, archive_db, Archive.TableNameArchive(), Archive.ParseIntoCUDType()); err != nil {
+		if err := cass_cud.InsertData(ctx, archive_db, Archive.TableNameArchive(), Archive.ParseToCUDType()); err != nil {
 			cache.ErrorData.AppendError(err)
 		}
 	}
@@ -98,7 +98,7 @@ func KurirNotificationInHandles(ctx context.Context, data notification_models.No
 			Data:      data.Data,
 		}
 
-		if err := cass_cud.InsertData(ctx, archive_db, Archive.TableNameArchive(), Archive.ParseIntoCUDType()); err != nil {
+		if err := cass_cud.InsertData(ctx, archive_db, Archive.TableNameArchive(), Archive.ParseToCUDType()); err != nil {
 			cache.ErrorData.AppendError(err)
 		}
 	}

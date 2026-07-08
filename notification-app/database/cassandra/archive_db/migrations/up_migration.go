@@ -13,6 +13,8 @@ import (
 func UpRelation(ctx context.Context, session *gocql.Session) []error {
 	var errs []error = []error{}
 
+	fmt.Println("uprelation jalan")
+
 	for _, model := range model_list {
 		// Tetap pakai timeout 6 detik per model biar ga gantung kalau lemot
 		fctx, cancel := context.WithTimeout(ctx, time.Second*6)
@@ -22,8 +24,10 @@ func UpRelation(ctx context.Context, session *gocql.Session) []error {
 			if err := historicalModel.CreateArchiveTable(fctx, session); err != nil {
 				errs = append(errs, err)
 			}
+
+			fmt.Printf("Objek %T mengimplementasikan cass_models.Method\n", model)
 		} else {
-			fmt.Printf("Objek %T tidak mengimplementasikan archive_models.Method\n", model)
+			fmt.Printf("Objek %T tidak mengimplementasikan cass_models.Method\n", model)
 		}
 
 		cancel() // Wajib di-cancel setelah selesai per iterasi biar ga leak memory

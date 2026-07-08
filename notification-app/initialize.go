@@ -145,7 +145,7 @@ func (O *Orchestration[T]) Watch(a *connection_models_ws.ActiveConnectionsEntity
 		O.wg.Wait()
 	}
 }
-func RunApp() {
+func RunApp(rebootcass bool) {
 
 	go cache.ErrorData.PrintError()
 	time.Sleep(time.Second * 2)
@@ -185,10 +185,12 @@ func RunApp() {
 	}
 
 	// 1. Jalankan DownRelation
-	if errs := archive_migrations.DownRelation(ctx, archive_db); len(errs) > 0 && errs[0] != nil {
-		cache.ErrorData.AppendError(err_conn)
-	}
+	if rebootcass {
+		if errs := archive_migrations.DownRelation(ctx, archive_db); len(errs) > 0 && errs[0] != nil {
+			cache.ErrorData.AppendError(err_conn)
+		}
 
+	}
 	// 2. Jalankan UpRelation
 	if errs := archive_migrations.UpRelation(ctx, archive_db); len(errs) > 0 && errs[0] != nil {
 		cache.ErrorData.AppendError(errs[0])

@@ -12,6 +12,15 @@ import (
 
 const timeout = 6
 
+type PartitionKey map[string]bool
+
+var PartitionKeyArchive PartitionKey = PartitionKey{
+	"id_pengguna": true,
+	"id_seller":   true,
+	"id_kurir":    true,
+	"created_at":  true,
+}
+
 func InsertData(ctx context.Context, session *gocql.Session, tablename string, append_data ...map[string]interface{}) error {
 	if len(append_data) == 0 {
 		return nil
@@ -101,6 +110,10 @@ func UpdateData(ctx context.Context, session *gocql.Session, tablename string, i
 
 			// Membangun SET klausa dari data asli murni
 			for col, val := range d {
+				if PartitionKeyArchive[col] {
+					continue
+				}
+
 				setClauses = append(setClauses, fmt.Sprintf("%s = ?", col))
 				values = append(values, val)
 			}

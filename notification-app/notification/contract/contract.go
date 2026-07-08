@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	notification_models "burung-notificationing-app/notification-app/notification/models"
+
 )
 
 type ContractNotification[T notification_models.NotificationPengguna | notification_models.NotificationSeller | notification_models.NotificationKurir] interface {
@@ -30,11 +31,15 @@ func (n NotificationManager[T]) ParseNotification(data interface{}) (error, T) {
 	var byteData []byte
 	switch v := data.(type) {
 	case []byte:
+		fmt.Println("[TRACE] dianggap sebagai []byte")
 		byteData = v
 	case string:
 		byteData = []byte(v)
+	case T:
+		result = v
+		return nil, result
 	default:
-		return fmt.Errorf("unsupported data type for parsing"), result
+		return fmt.Errorf("[TRACE] unsupported data type for parsing %v", v), result
 	}
 
 	err := json.Unmarshal(byteData, &result)

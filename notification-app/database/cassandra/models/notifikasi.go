@@ -10,9 +10,8 @@ import (
 )
 
 // ==========================================
-// 1. DEFINISI STRUCT
+// 1. DEFINISI STRUCT (Tetap sesuai referensimu)
 // ==========================================
-
 type NotificationPengguna struct {
 	IDPengguna int64   `json:"id_pengguna"`
 	Pengirim   string  `json:"pengirim"`
@@ -20,7 +19,9 @@ type NotificationPengguna struct {
 	Pesan      string  `json:"pesan"`
 	Pop        float32 `json:"pop"`
 	Archive    bool    `json:"archive"`
-	CreatedAt  string  `json:"created_at"` // Format ISO 8601
+	Inbox      bool    `json:"inbox"`
+	Activity   bool    `json:"activity"`
+	CreatedAt  string  `json:"created_at"`
 	ExpiredAt  string  `json:"expired_at"`
 	Data       struct {
 		Metadata map[string]interface{} `json:"metadata"`
@@ -35,6 +36,8 @@ type NotificationSeller struct {
 	Pesan     string  `json:"pesan"`
 	Pop       float32 `json:"pop"`
 	Archive   bool    `json:"archive"`
+	Inbox     bool    `json:"inbox"`
+	Activity  bool    `json:"activity"`
 	CreatedAt string  `json:"created_at"`
 	ExpiredAt string  `json:"expired_at"`
 	Data      struct {
@@ -50,6 +53,8 @@ type NotificationKurir struct {
 	Pesan     string  `json:"pesan"`
 	Pop       float32 `json:"pop"`
 	Archive   bool    `json:"archive"`
+	Inbox     bool    `json:"inbox"`
+	Activity  bool    `json:"activity"`
 	CreatedAt string  `json:"created_at"`
 	ExpiredAt string  `json:"expired_at"`
 	Data      struct {
@@ -68,18 +73,20 @@ func (n NotificationPengguna) TableNameArchive() string {
 
 func (n NotificationPengguna) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS %s (
-		id_pengguna bigint,
-		pengirim text,
-		judul text,
-		pesan text,
-		pop float,
-		archive boolean,
-		created_at timestamp,
-		expired_at timestamp,
-		data text,
-		PRIMARY KEY ((id_pengguna), created_at)
-	) WITH CLUSTERING ORDER BY (created_at DESC)`, n.TableNameArchive())
+    CREATE TABLE IF NOT EXISTS %s (
+        id_pengguna bigint,
+        pengirim text,
+        judul text,
+        pesan text,
+        pop float,
+        archive boolean,
+        inbox boolean,
+        activity boolean,
+        created_at timestamp,
+        expired_at timestamp,
+        data text,
+        PRIMARY KEY ((id_pengguna), created_at)
+    ) WITH CLUSTERING ORDER BY (created_at DESC)`, n.TableNameArchive())
 
 	if err := session.Query(query).ExecContext(ctx); err != nil {
 		return fmt.Errorf("gagal membuat tabel %s: %w", n.TableNameArchive(), err)
@@ -88,7 +95,7 @@ func (n NotificationPengguna) CreateArchiveTable(ctx context.Context, session *g
 	return nil
 }
 
-func (n NotificationPengguna) ParseIntoCUDType() map[string]interface{} {
+func (n NotificationPengguna) ParseToCUDType() map[string]interface{} {
 	dataJSON, _ := json.Marshal(n.Data)
 	createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
@@ -104,19 +111,12 @@ func (n NotificationPengguna) ParseIntoCUDType() map[string]interface{} {
 		"pesan":       n.Pesan,
 		"pop":         n.Pop,
 		"archive":     n.Archive,
+		"inbox":       n.Inbox,
+		"activity":    n.Activity,
 		"created_at":  createdAt,
 		"expired_at":  expiredAt,
 		"data":        string(dataJSON),
 	}
-}
-
-func (n NotificationPengguna) DropTableArchive(ctx context.Context, session *gocql.Session) error {
-	query := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, n.TableNameArchive())
-	if err := session.Query(query).ExecContext(ctx); err != nil {
-		return fmt.Errorf("gagal drop tabel %s: %w", n.TableNameArchive(), err)
-	}
-	fmt.Printf("Berhasil drop tabel %s\n", n.TableNameArchive())
-	return nil
 }
 
 // ==========================================
@@ -129,18 +129,20 @@ func (n NotificationSeller) TableNameArchive() string {
 
 func (n NotificationSeller) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS %s (
-		id_seller bigint,
-		pengirim text,
-		judul text,
-		pesan text,
-		pop float,
-		archive boolean,
-		created_at timestamp,
-		expired_at timestamp,
-		data text,
-		PRIMARY KEY ((id_seller), created_at)
-	) WITH CLUSTERING ORDER BY (created_at DESC)`, n.TableNameArchive())
+    CREATE TABLE IF NOT EXISTS %s (
+        id_seller bigint,
+        pengirim text,
+        judul text,
+        pesan text,
+        pop float,
+        archive boolean,
+        inbox boolean,
+        activity boolean,
+        created_at timestamp,
+        expired_at timestamp,
+        data text,
+        PRIMARY KEY ((id_seller), created_at)
+    ) WITH CLUSTERING ORDER BY (created_at DESC)`, n.TableNameArchive())
 
 	if err := session.Query(query).ExecContext(ctx); err != nil {
 		return fmt.Errorf("gagal membuat tabel %s: %w", n.TableNameArchive(), err)
@@ -149,7 +151,7 @@ func (n NotificationSeller) CreateArchiveTable(ctx context.Context, session *goc
 	return nil
 }
 
-func (n NotificationSeller) ParseIntoCUDType() map[string]interface{} {
+func (n NotificationSeller) ParseToCUDType() map[string]interface{} {
 	dataJSON, _ := json.Marshal(n.Data)
 	createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
@@ -165,19 +167,12 @@ func (n NotificationSeller) ParseIntoCUDType() map[string]interface{} {
 		"pesan":      n.Pesan,
 		"pop":        n.Pop,
 		"archive":    n.Archive,
+		"inbox":      n.Inbox,
+		"activity":   n.Activity,
 		"created_at": createdAt,
 		"expired_at": expiredAt,
 		"data":       string(dataJSON),
 	}
-}
-
-func (n NotificationSeller) DropTableArchive(ctx context.Context, session *gocql.Session) error {
-	query := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, n.TableNameArchive())
-	if err := session.Query(query).ExecContext(ctx); err != nil {
-		return fmt.Errorf("gagal drop tabel %s: %w", n.TableNameArchive(), err)
-	}
-	fmt.Printf("Berhasil drop tabel %s\n", n.TableNameArchive())
-	return nil
 }
 
 // ==========================================
@@ -190,18 +185,20 @@ func (n NotificationKurir) TableNameArchive() string {
 
 func (n NotificationKurir) CreateArchiveTable(ctx context.Context, session *gocql.Session) error {
 	query := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS %s (
-		id_kurir bigint,
-		pengirim text,
-		judul text,
-		pesan text,
-		pop float,
-		archive boolean,
-		created_at timestamp,
-		expired_at timestamp,
-		data text,
-		PRIMARY KEY ((id_kurir), created_at)
-	) WITH CLUSTERING ORDER BY (created_at DESC)`, n.TableNameArchive())
+    CREATE TABLE IF NOT EXISTS %s (
+        id_kurir bigint,
+        pengirim text,
+        judul text,
+        pesan text,
+        pop float,
+        archive boolean,
+        inbox boolean,
+        activity boolean,
+        created_at timestamp,
+        expired_at timestamp,
+        data text,
+        PRIMARY KEY ((id_kurir), created_at)
+    ) WITH CLUSTERING ORDER BY (created_at DESC)`, n.TableNameArchive())
 
 	if err := session.Query(query).ExecContext(ctx); err != nil {
 		return fmt.Errorf("gagal membuat tabel %s: %w", n.TableNameArchive(), err)
@@ -210,7 +207,7 @@ func (n NotificationKurir) CreateArchiveTable(ctx context.Context, session *gocq
 	return nil
 }
 
-func (n NotificationKurir) ParseIntoCUDType() map[string]interface{} {
+func (n NotificationKurir) ParseToCUDType() map[string]interface{} {
 	dataJSON, _ := json.Marshal(n.Data)
 	createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
@@ -226,17 +223,10 @@ func (n NotificationKurir) ParseIntoCUDType() map[string]interface{} {
 		"pesan":      n.Pesan,
 		"pop":        n.Pop,
 		"archive":    n.Archive,
+		"inbox":      n.Inbox,
+		"activity":   n.Activity,
 		"created_at": createdAt,
 		"expired_at": expiredAt,
 		"data":       string(dataJSON),
 	}
-}
-
-func (n NotificationKurir) DropTableArchive(ctx context.Context, session *gocql.Session) error {
-	query := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, n.TableNameArchive())
-	if err := session.Query(query).ExecContext(ctx); err != nil {
-		return fmt.Errorf("gagal drop tabel %s: %w", n.TableNameArchive(), err)
-	}
-	fmt.Printf("Berhasil drop tabel %s\n", n.TableNameArchive())
-	return nil
 }
