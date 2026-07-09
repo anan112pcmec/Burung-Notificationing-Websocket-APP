@@ -280,7 +280,7 @@ echo ""
 print_info "Menjalankan backend Go application..."
 echo ""
 
-OUTPUT=$(go run main.go 2>&1)
+OUTPUT=$(go run main.go go run main.go 2>&1)
 EXIT_CODE=$?
 
 echo ""

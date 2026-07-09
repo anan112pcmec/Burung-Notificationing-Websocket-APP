@@ -36,7 +36,7 @@ func (i *IdentitasKurir) Validating(ctx context.Context, rds *redis.Client) (sta
 		return false
 	}
 
-	cacheSession := rds.HGetAll(ctx, i.GetSessionKey()).Val()
+	cacheSession := rds.HGetAll(ctx, fmt.Sprintf(`session_kurir_%s_%s_%s`, strconv.Itoa(int(i.IdKurir)), i.UsernameKurir, i.EmailKurir)).Val()
 	if id_kurir, err_id := strconv.Atoi(cacheSession["id_kurir"]); err_id != nil {
 		return false
 	} else if id_kurir == 0 {
